@@ -4,6 +4,7 @@
   "description": "Assuming we need to iterate over a large data source matching data, what is the most efficient way:  - In memory  - Redis - map/reduce via library  - Mongo - native map/reduce  - SQL?",
   "main": "index.js",
   "dependencies": {
+    "async": "^1.5.0",
     "mongoose": "^4.2.3"
   },
   "devDependencies": {},
