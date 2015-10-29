@@ -1,0 +1,15 @@
+{
+  "name": "map_data_spike",
+  "version": "1.0.0",
+  "description": "Assuming we need to iterate over a large data source matching data, what is the most efficient way:  - In memory  - Redis - map/reduce via library  - Mongo - native map/reduce  - SQL?",
+  "main": "index.js",
+  "dependencies": {
+    "mongoose": "^4.2.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
