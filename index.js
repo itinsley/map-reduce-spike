@@ -1,11 +1,13 @@
-
 var mongoose = require('mongoose');
 var async = require('async');
-mongoose.connect('mongodb://localhost/map-data-spike');
+var docSchema = new mongoose.Schema({ sentence: String });
+var Document = mongoose.model('Document', docSchema );
+
 
 docArray = createDummyData();
 
 
+mongoose.connect('mongodb://localhost/map-data-spike');
 var cn = mongoose.connection;
 cn.on('error', console.error.bind(console, 'connection error:'));
 cn.once('open', function (callback) {
@@ -21,6 +23,27 @@ cn.once('open', function (callback) {
     },
 
     function(callback){
+      console.log()
+      timer(function(){
+        console.log("In Mongoose")
+
+        var o = {};
+        o.map = function () {
+          if (this.sentence.indexOf("Lorem")>0)
+            emit(this.sentence, 1)
+        }
+
+        Document.mapReduce(o, function (err, results) {
+          console.log("Result: " + results.length)
+          callback()
+        })
+
+      })
+
+
+    },
+
+    function(callback){
       cn.close()
       console.log("Finished. Database closed")
       callback();
@@ -29,23 +52,22 @@ cn.once('open', function (callback) {
 
 })
 
-timer(function(){inMemoryFilter(docArray)})
-
+timer(function(callback){
+  console.log("In memory")
+  inMemoryFilter(docArray)
+})
 
 function mongooseSaveArray(docArray, callback){
-
-  var docSchema = new mongoose.Schema({ sentence: String });
-  var Document = mongoose.model('Document', docSchema );
 
   //Runs them async but waits until all are complete before completion function
   async.each(
     docArray,
     function(doc, callback){
-      console.log("Saving " + doc.sentence)
+      // console.log("Saving " + doc.sentence)
       var documentObj = new Document({sentence: doc.sentence})
       documentObj.save(function (err, doc) {
         if (err) return console.error(err);
-        console.log('saved...'+ doc)
+        // console.log('saved...'+ doc)
         callback()
       });
 
@@ -59,8 +81,6 @@ function mongooseSaveArray(docArray, callback){
   )
 }
 
-
-
 function createDummyData(){
 
   // Create in memory array of objects containing dummy data
@@ -71,7 +91,7 @@ function createDummyData(){
 
 
   var objectArr=[]
-  for(var i=1;i<10;i++){
+  for(var i=1;i<10000;i++){
     var start = Math.floor(Math.random()*word_count)
     var end = Math.floor(Math.random()*(word_count-start))+start
     var sentence = words.slice(start, end).join(" ")
@@ -82,10 +102,9 @@ function createDummyData(){
   return objectArr
 }
 
-
 function inMemoryFilter(arr){
   lorems = arr.filter(function hasLorem(doc){
-    return doc.sentence.indexOf("Lorem")
+    return doc.sentence.indexOf("Lorem")>0
   })
   console.log("Result: " + lorems.length)
 }
