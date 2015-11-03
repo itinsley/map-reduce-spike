@@ -2,6 +2,7 @@ var mongoose = require('mongoose');
 var async = require('async');
 var docSchema = new mongoose.Schema({ sentence: String });
 var Document = mongoose.model('Document', docSchema );
+var start
 
 
 docArray = createDummyData();
@@ -13,52 +14,47 @@ cn.on('error', console.error.bind(console, 'connection error:'));
 cn.once('open', function (callback) {
 
   async.series([
-    function(callback){ cn.db.dropDatabase(callback) },
+    function(cb){ cn.db.dropDatabase(cb) },
+
+    function(cb){
+      console.log("in memory")
+      startTimer()
+      inMemoryFilter(docArray, cb)
+    },
+
+    function(cb){
+      endTimer()
+      cb();
+    },
 
     function(callback){
       mongooseSaveArray(docArray, function(){
-        console.log("Mongo data saved.");
         callback();
       })
     },
 
-    function(callback){
-      console.log()
-      timer(function(){
-        console.log("In Mongoose")
-
-        var o = {};
-        o.map = function () {
-          if (this.sentence.indexOf("Lorem")>0)
-            emit(this.sentence, 1)
-        }
-
-        Document.mapReduce(o, function (err, results) {
-          console.log("Result: " + results.length)
-          callback()
-        })
-
-      })
-
-
+    function(cb){
+      console.log("in Mongo")
+      startTimer()
+      mappReduceFilter(cb);
     },
 
-    function(callback){
+    function(cb){
+      endTimer()
+      cb();
+    },
+
+    function(cb){
       cn.close()
       console.log("Finished. Database closed")
-      callback();
+      cb();
     }
   ])
 
 })
 
-timer(function(callback){
-  console.log("In memory")
-  inMemoryFilter(docArray)
-})
 
 function mongooseSaveArray(docArray, callback){
-
   //Runs them async but waits until all are complete before completion function
   async.each(
     docArray,
@@ -91,7 +87,7 @@ function createDummyData(){
 
 
   var objectArr=[]
-  for(var i=1;i<10000;i++){
+  for(var i=1;i<100000;i++){
     var start = Math.floor(Math.random()*word_count)
     var end = Math.floor(Math.random()*(word_count-start))+start
     var sentence = words.slice(start, end).join(" ")
@@ -102,19 +98,34 @@ function createDummyData(){
   return objectArr
 }
 
-function inMemoryFilter(arr){
+function inMemoryFilter(arr, callback){
   lorems = arr.filter(function hasLorem(doc){
     return doc.sentence.indexOf("Lorem")>0
   })
   console.log("Result: " + lorems.length)
+  callback();
 }
 
-function timer(func){
+function mappReduceFilter(callback){
+  var o = {};
+  o.map = function () {
+    if (this.sentence.indexOf("Lorem")>0)
+      emit(this.sentence, 1)
+  }
 
-  var start = new Date().getTime();
+  Document.mapReduce(o, function (err, results) {
+    console.log("Result: " + results.length)
+    callback()
+  })
 
-  func()
+}
 
+
+function startTimer(){
+  start = new Date().getTime();
+}
+
+function endTimer(){
   var end = new Date().getTime();
   var time = end - start;
   console.log('Execution time: ' + time + "ms");
@@ -123,3 +134,15 @@ function timer(func){
 
 
 
+// function timer(func){
+//   var start
+//   start = new Date().getTime();
+//   console.log(func.toString());
+//   func(function(){
+//     var end = new Date().getTime();
+//     var time = end - start;
+//     console.log('Execution time: ' + time + "ms");
+//     // console.log("making callback")
+//     // console.log(callback)
+//   });
+// }
