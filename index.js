@@ -59,18 +59,14 @@ function mongooseSaveArray(docArray, callback){
   async.each(
     docArray,
     function(doc, callback){
-      // console.log("Saving " + doc.sentence)
       var documentObj = new Document({sentence: doc.sentence})
       documentObj.save(function (err, doc) {
         if (err) return console.error(err);
-        // console.log('saved...'+ doc)
         callback()
       });
-
     },
     function(err){
-      // All tasks are done now
-      console.log("my work is done")
+      // Finished
       callback()
     }
 
@@ -87,7 +83,7 @@ function createDummyData(){
 
 
   var objectArr=[]
-  for(var i=1;i<100000;i++){
+  for(var i=1;i<1000;i++){
     var start = Math.floor(Math.random()*word_count)
     var end = Math.floor(Math.random()*(word_count-start))+start
     var sentence = words.slice(start, end).join(" ")
@@ -131,18 +127,3 @@ function endTimer(){
   console.log('Execution time: ' + time + "ms");
 }
 
-
-
-
-// function timer(func){
-//   var start
-//   start = new Date().getTime();
-//   console.log(func.toString());
-//   func(function(){
-//     var end = new Date().getTime();
-//     var time = end - start;
-//     console.log('Execution time: ' + time + "ms");
-//     // console.log("making callback")
-//     // console.log(callback)
-//   });
-// }
