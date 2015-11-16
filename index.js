@@ -1,77 +1,44 @@
-var mongoose = require('mongoose');
+var mongoose_da = require('./mongoose_da')
 var async = require('async');
-var docSchema = new mongoose.Schema({ sentence: String });
-var Document = mongoose.model('Document', docSchema );
+var timer = require('./timer')
 var start
 
-
 docArray = createDummyData();
+console.log("in memory")
+timer.start()
+inMemoryFilter(docArray)
+timer.end()
 
 
-mongoose.connect('mongodb://localhost/map-data-spike');
-var cn = mongoose.connection;
-cn.on('error', console.error.bind(console, 'connection error:'));
-cn.once('open', function (callback) {
+mongoose_da.connection.once('open', function (callback) {
 
   async.series([
-    function(cb){ cn.db.dropDatabase(cb) },
 
     function(cb){
-      console.log("in memory")
-      startTimer()
-      inMemoryFilter(docArray, cb)
-    },
-
-    function(cb){
-      endTimer()
-      cb();
-    },
-
-    function(callback){
-      mongooseSaveArray(docArray, function(){
-        callback();
+      mongooseDa.saveData(docArray, function(){
+        cb();
       })
     },
 
     function(cb){
       console.log("in Mongo")
-      startTimer()
-      mappReduceFilter(cb);
+      timer.start();
+      mongooseDa.mapReduceFilter(function(){
+        cb();
+      })
     },
 
     function(cb){
-      endTimer()
-      cb();
-    },
-
-    function(cb){
-      cn.close()
+      timer.end();
+      mongoose_da.connection.close()
       console.log("Finished. Database closed")
       cb();
     }
+
   ])
 
 })
 
-
-function mongooseSaveArray(docArray, callback){
-  //Runs them async but waits until all are complete before completion function
-  async.each(
-    docArray,
-    function(doc, callback){
-      var documentObj = new Document({sentence: doc.sentence})
-      documentObj.save(function (err, doc) {
-        if (err) return console.error(err);
-        callback()
-      });
-    },
-    function(err){
-      // Finished
-      callback()
-    }
-
-  )
-}
 
 function createDummyData(){
 
@@ -79,8 +46,6 @@ function createDummyData(){
   var text = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
   var words = text.split(" ")
   var word_count = words.length
-
-
 
   var objectArr=[]
   for(var i=1;i<1000;i++){
@@ -94,36 +59,9 @@ function createDummyData(){
   return objectArr
 }
 
-function inMemoryFilter(arr, callback){
+function inMemoryFilter(arr){
   lorems = arr.filter(function hasLorem(doc){
     return doc.sentence.indexOf("Lorem")>0
   })
   console.log("Result: " + lorems.length)
-  callback();
 }
-
-function mappReduceFilter(callback){
-  var o = {};
-  o.map = function () {
-    if (this.sentence.indexOf("Lorem")>0)
-      emit(this.sentence, 1)
-  }
-
-  Document.mapReduce(o, function (err, results) {
-    console.log("Result: " + results.length)
-    callback()
-  })
-
-}
-
-
-function startTimer(){
-  start = new Date().getTime();
-}
-
-function endTimer(){
-  var end = new Date().getTime();
-  var time = end - start;
-  console.log('Execution time: ' + time + "ms");
-}
-
